@@ -1,28 +1,36 @@
-Run one thread that hands work to child threads, and your conversation with it fills up with their messages and completion notices. Notify Feed takes that traffic out of the main feed and lists it in a tab beside it, so the feed shows what you said and what the agent said to you. Agents still receive every message; only what you see changes.
-
 ## What you get
 
-- Messages from other threads and BB's notices about child threads (completed, failed, interrupted, needs attention, digest) leave the main feed. Your own messages, ordinary agent replies and the turn in progress stay.
-- A Notifications button in the thread header shows how many entries the thread has, or how many are new since you last opened the tab.
-- The tab lists entries by day, newest first, with filters for Done, Attention and Info. Each card shows the time, the kind, the sending thread and three lines of text; click it to read the whole entry.
-- A thread's message and its completion notice within 60 seconds become one card.
-- Thread ids and task keys in the text become links.
-- A switch turns the tab into a list of sending threads. Open one to read your agent's whole conversation with it in time order, including what the agent sent to it on its own.
-- Under a conversation there is a field: write to that thread without leaving the one you are in. Your message goes to it as an ordinary user message and starts or joins its turn.
-- Tell the agent, off by default, also sends the agent of the open thread a short note that you wrote to the other thread. The note lands in the tab, and it starts the agent's turn: BB cannot deliver a message without one.
-- The tab has no width thresholds and reads the same in a wide panel and on a phone.
+When a root thread assigns tasks to child threads, the conversation fills with handoffs and completion reports. Notify Feed hides those rows from the main chat and moves them into a Notifications panel on the right. The conversation keeps only your messages and direct agent replies. Agents continue to receive all background traffic normally.
 
-## Settings
+- Messages sent by child threads, BB system notices (completed, failed, interrupted, needs attention, batch digests), and external tool messages starting with `[notify:Name]` leave the main feed.
+- A button in the thread header shows total notifications or the count of new entries since you last opened the tab.
+- Cards are grouped by day with filters for All, Done, Attention, and Info / replies. Clicking a card expands its full text.
+- A thread message and its completion notice within 60 seconds combine into a single card.
+- A switch changes the tab to a list of sending threads with status indicators. Open a thread to read the complete conversation in time order.
+- Reply directly to child threads from the panel without switching conversations.
+- An optional toggle sends a note to the root agent when you reply to a child thread.
 
-- `language`: `en` or `ru`. With `ru` BB's system notices are shown in Russian too.
-- `marker`: empty by default. Set a marker such as `[bg]` and the plugin asks your agents to start short housekeeping replies with it; finished replies that start with the marker move to the tab. Leave it empty and no instruction is added to your agents.
-- `hide`: on by default. Turn it off and the main feed is stock BB again while the button and the tab keep working.
-- `threads`: a JSON array of thread ids to work in. Empty means every thread.
+## Configuration
+
+Settings are available under Settings -> Plugins -> Notify Feed, or via `bb plugin config notify-feed set <key> <value>`:
+
+- `language` (`en`): interface language (`en` or `ru`). Russian translates system notices in the tab.
+- `marker` (`""`): reply prefix such as `[bg]`. When set, the plugin instructs agents to prefix short background replies with this marker, moving them to the tab. Empty leaves agent prompts untouched.
+- `hide` (`true`): hides notification rows in the main feed. Set to `false` to restore the stock feed while keeping the tab active.
+- `threads` (`[]`): JSON array of thread IDs where the plugin runs. Empty enables the plugin everywhere.
 
 ## How it works
 
-The tab reads the thread through BB's own API. Nothing leaves your machine, and there is no account or external service. The plugin stores, per thread, the time you last looked at the tab, the view you chose and the last 300 messages you sent from the tab. It writes to a thread only when you press Send, and it reads another thread's feed only while that thread's conversation is open on screen.
+The plugin runs entirely on your local machine using BB's internal APIs. It requires no external network access, cloud accounts, or third-party servers.
 
-## Limits
+The server caches thread metadata locally, checks whether child threads are archived, and tracks the last viewed timestamp per thread. When replying to a child thread, the plugin verifies whether the message arrived before alerting you to an error, avoiding accidental duplicate turns.
 
-Checked with BB 0.45 and 0.46. Hiding rows and the header button rest on BB's experimental plugin slots and, for hiding, on the feed's internal markup; a BB update can change them, and rows then stay visible or the button disappears until the plugin is updated. The tab itself uses the public plugin API and opens from the right panel's "+" menu even when those slots are missing. If the plugin cannot read the feed twice in a row, nothing is hidden until it can. The feed is polled every 8 seconds, so a new row is hidden with a short delay. At most 20 pages of thread history are read.
+## Limitations
+
+- Hiding feed rows and showing the thread header button rely on BB experimental slots (`experimental_appOverlay` and `experimental_threadHeaderAction`). If these slots are absent, the Notifications tab remains accessible from the right panel menu.
+- Feed polling runs every 8 seconds. New messages take up to 8 seconds to hide.
+- If two consecutive polls fail, the plugin temporarily unhides rows to prevent stale filtering.
+- Messages sent from the tab have a 20,000 character limit.
+- Sending a note to the host agent starts that agent's turn, as BB cannot deliver messages without starting a turn.
+- In the tab composer, pressing Enter submits the message.
+- At most 20 history pages are read per thread.

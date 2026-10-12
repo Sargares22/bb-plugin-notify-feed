@@ -64,7 +64,11 @@ type Strings = {
   closed: { archived: string; gone: string; none: string };
   instruction: (marker: string) => string;
   // BB's own English system texts and what to show instead. Empty = leave BB's text untouched.
+  // A card shows a notice without BB's header line, so the text starts with the predicate ("failed."):
+  // English rewrites only that start into a full phrase and leaves the rest of BB's text as it is.
   systemTexts: [RegExp, string][];
+  // Shown for a "completed" notice that carries no text of the thread's own. Empty = leave BB's word untouched.
+  bareCompleted: string;
 };
 
 export const STRINGS: Record<Lang, Strings> = {
@@ -115,7 +119,12 @@ export const STRINGS: Record<Lang, Strings> = {
       none: "These entries have no sending thread, so there is nobody to reply to.",
     },
     instruction: marker => `Start a short housekeeping reply to a message from another thread or from the system with ${marker}; a result meant for the user goes without the marker.`,
-    systemTexts: [],
+    systemTexts: [
+      [/^\s*failed\.?(?=\s|$)/i, "Failed."],
+      [/^\s*was interrupted because\s+/i, "Interrupted: "],
+      [/^\s*was interrupted\.?(?=\s|$)/i, "Interrupted."],
+    ],
+    bareCompleted: "Completed.",
   },
   ru: {
     locale: "ru-RU",
@@ -173,5 +182,6 @@ export const STRINGS: Record<Lang, Strings> = {
       [/\bwas interrupted\b/gi, "прерван"],
       [/Review the thread before deciding next steps\./g, "Проверьте тред перед следующим шагом."],
     ],
+    bareCompleted: "",
   },
 };

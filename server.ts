@@ -1,6 +1,6 @@
 import { defineRpcContract, type BbPluginApi } from "@get-bb/plugin-sdk";
 import { z } from "zod";
-import { LANGS, MAX_TEXT, STRINGS, langOf, lastSent } from "./i18n.ts";
+import { LANGS, MAX_TEXT, STRINGS, langOf, lastSent, type Lang } from "./i18n.ts";
 
 // parts — what is glued into a "done" card: the thread's messages and the agent's replies to them, in time order.
 // time — when the part was written; the by-thread view orders a conversation by it.
@@ -86,6 +86,15 @@ type CacheEntry = { title?: string; href?: string; at: number; failed?: boolean;
 // The service line BB puts before a message from another thread or from the system; cards show the text without it.
 const HEADER_RE = /^(?:(?:\[bb message from thread:[^\]]+\]|\[bb system\](?=\s*Child thread updates:))[ \t]*(?:\r?\n(?:\r?\n)?)?|\[bb system\]\s*@thread:[^\s:]+[ \t]*(?:(?:completed|finished):[ \t]*(?:\r?\n(?:\r?\n)?|$))?)/i;
 const clean = (text: string) => text.replace(HEADER_RE, "");
+// The text of a card made from BB's own notice, header already removed. BB's notice about a child thread starts
+// with the predicate once the header is gone ("failed. Review the thread…"), so its start is rewritten in the
+// chosen language. What a thread wrote itself (the text after "completed:") is never touched.
+// Exported so that it can be checked on sample entries without a running BB.
+export const systemTextOf = (lang: Lang, r: Pick<Row, "kind" | "systemMessageKind">, text: string): string => {
+  const strings = STRINGS[lang];
+  if (r.systemMessageKind === "child-completed") return strings.bareCompleted && /^\s*completed\.?\s*$/i.test(text) ? strings.bareCompleted : text;
+  return r.kind === "system" || r.systemMessageKind?.startsWith("child-") ? strings.systemTexts.reduce((out, [from, to]) => out.replace(from, to), text) : text;
+};
 const threadCache = new Map<string, CacheEntry>();
 const isStale = (id: string) => {
   const e = threadCache.get(id);
@@ -194,7 +203,6 @@ export default async function plugin(bb: BbPluginApi) {
       "child-stopped": "interrupted", "child-needs-attention": "attention", "child-question": "attention",
       "child-outcome-batch": "digest",
     };
-    const translateSystem = (text: string) => strings.systemTexts.reduce((out, [from, to]) => out.replace(from, to), text);
     const noticeItems = notices.map(r => {
       // A tool notice: the name is both the badge and the sender, the header line is not shown.
       // It has no sending thread, so it is never glued into a "done" card.
@@ -215,7 +223,7 @@ export default async function plugin(bb: BbPluginApi) {
         sender: r.senderThreadId ?? r.systemMessageSubject?.threadName ?? r.systemMessageSubject?.threadId ?? strings.system,
         senderThreadId,
         kind: KINDS[rawKind] ?? rawKind,
-        text: r.kind === "system" || /^child-(?!completed)/.test(r.systemMessageKind ?? "") ? translateSystem(clean(rawText)) : clean(rawText),
+        text: systemTextOf(lang, r, clean(rawText)),
         reply: replyOf.get(r.id) ?? "",
         replyAt: replyAt.get(r.id) ?? r.createdAt ?? r.startedAt ?? 0,
         parts: [] as Part[],

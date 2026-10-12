@@ -1,7 +1,7 @@
 {
   "name": "bb-plugin-notify-feed",
-  "version": "0.3.0",
-  "description": "BB plugin: moves messages from other threads and child-thread notices out of a thread's feed into a Notifications tab.",
+  "version": "0.3.1",
+  "description": "Keep your conversation from drowning in child-thread reports when a thread delegates work. Background messages and completion notices move to a Notifications tab beside the feed.",
   "license": "MIT",
   "author": "Sargares22 (https://github.com/Sargares22)",
   "repository": { "type": "git", "url": "https://github.com/Sargares22/bb-plugin-notify-feed" },
@@ -13,7 +13,7 @@
   "scripts": { "build": "bb plugin build", "typecheck": "tsc --noEmit" },
   "bb": {
     "name": "Notify Feed",
-    "description": "Moves messages from other threads and child-thread notices out of a thread's feed into a Notifications tab.",
+    "description": "Keep your conversation from drowning in child-thread reports when a thread delegates work. Background messages and completion notices move to a Notifications tab beside the feed.",
     "branding": { "icon": "./assets/icon.svg" },
     "server": "./server.ts",
     "app": "./app.tsx",

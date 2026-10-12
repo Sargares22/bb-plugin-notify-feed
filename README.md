@@ -1,89 +1,80 @@
 # Notify Feed
 
-A [BB](https://getbb.app) plugin that moves agent-to-agent traffic out of a thread's main feed and into a Notifications tab beside it.
+![Notify Feed tab](docs/screenshot.png)
 
-When one thread hands work to child threads, its feed fills up with their messages and completion notices. Notify Feed hides those rows in the main feed and lists them in a tab of the right panel, so the feed shows what you said and what the agent said to you. Message delivery does not change: agents receive everything as before.
+A BB plugin that moves child-thread traffic and background notices out of a thread's main conversation into a dedicated Notifications tab.
+
+When a root thread assigns work to child threads, its chat fills with handoff messages, progress updates, and completion reports. Your conversation with the main agent gets lost under these rows. Notify Feed hides those entries from the main timeline and displays them in a side panel. Message delivery remains unchanged: agents still receive all messages.
 
 ## What it does
 
-Hidden from the main feed:
+The plugin removes these entries from the main timeline:
 
-- messages sent by other threads;
-- BB's system notices about child threads (completed, failed, interrupted, needs attention, digest);
-- messages from outside tools whose first line is exactly `[notify:Name]` (see below);
-- optionally, the agent's short replies to those messages (see the `marker` setting).
+- Messages sent by other threads.
+- BB system notices for child threads (completed, failed, interrupted, needs attention, and batch digests).
+- Messages from external tools whose first line is `[notify:Name]`.
+- Finished agent replies that start with the configured reply marker.
 
-Your own messages, ordinary agent replies, tool rows and the turn in progress stay where they are.
+User messages, standard agent replies, and turns in progress stay in the main timeline.
 
-A **Notifications: N** button appears in the thread header of every thread that has such entries. It opens the tab:
+A button in the thread header shows the total notification count, or the number of unseen entries. Clicking the button opens the Notifications tab:
 
-- entries grouped by day, newest first, with a filter: All, Done, Attention, Info / replies;
-- each card shows the time, the kind, the sending thread and three lines of plain text; click a card to read it in full;
-- a thread's message and its completion notice within 60 seconds become one card;
-- thread ids and task keys in the text become links;
-- the button shows **N new** when entries arrived since you last looked at the tab, and new cards carry a dot. The count is kept per thread and survives a window reload.
+- Entries are grouped by day, newest first, with filters for All, Done, Attention, and Info / replies. Click a card to read its full text.
+- A thread message and its completion notice within 60 seconds merge into one card.
+- Thread IDs and task keys in messages turn into clickable links.
+- Switch between timeline order and by-thread view to browse sending threads by state, then read the whole conversation in time order.
+- Send a reply directly to a child thread from the tab. Enter sends the message, and Shift+Enter inserts a newline.
+- Turn on Tell the agent to send a short note to the host agent that you wrote to the child thread.
 
-## By thread, and replying from the tab
+The tab layout has no width thresholds and was tested at panel widths from 280 to 900 px and in a 390×844 phone window.
 
-A switch at the end of the filter row changes the tab between **By time** (the default) and **By thread**. The choice is kept per thread and survives a window reload.
+## Installation
 
-By thread lists the sending threads, newest first: a dot colored by the thread's latest state, its name, its latest entry in one line and the number of entries. The filter then picks threads by that latest state. Entries without a sending thread (a `[notify:Name]` tool, a lone agent reply) get a row under their own name.
-
-Click a thread to read the conversation in time order, oldest first: what the thread sent, what the agent replied, what the agent sent to it on its own, and how each of the thread's turns ended. The agent's own messages are read from the receiving thread's feed, where each one is a row with a known sender. That feed is read only while the conversation is open.
-
-Under the conversation there is a field. Your message goes to that thread as an ordinary user message, through the same BB call the composer uses, and shows in the conversation as **You** at once. Enter sends, Shift+Enter starts a new line. While the message is on its way the button is busy. If BB refuses the message, the reason appears under the field and your text stays. If the connection drops before BB answers, the plugin looks for the message in the thread's feed: when it is there, it counts as sent; when it is not, you are told it may have been sent and nothing is repeated for you, because a repeat would be a second message and a second turn. A message is limited to 20,000 characters; a longer one is not sent and the field says so. For an archived or unavailable thread the field is replaced by a line that says why.
-
-**Tell the agent** under the field is off by default. When it is on, after your message the plugin sends the agent of the open thread a short note, `[notify:You]` followed by "wrote to thread <name>: <text>", so the note lands in the tab and not in the feed. BB has no way to deliver a message without starting a turn, so the note starts the agent's turn.
-
-The tab has no width thresholds: rows wrap on their own, so it reads the same in a wide panel and on a phone, where BB opens the panel over the whole screen. Checked at panel widths from 280 to 900 px and in a 390×844 phone window.
-
-## Messages from outside tools
-
-A tool that posts into a thread from outside (a mail watcher, a job runner) arrives as an ordinary user message. To have it treated as a notification, make the first line exactly `[notify:Name]` and put the text on the following lines. `Name` is 1–32 letters, digits, spaces, hyphens or dots, starting with a letter or digit; nothing else may be on that line. The card shows `Name` as its badge and hides the header line; the agent still receives the message unchanged. Any deviation leaves the message in the main feed. For tool authors: prepend `[notify:YourTool]` and a newline to the text you already send — nothing else is needed.
-
-## Install
-
-From the BB plugin store, or from this repository:
+Install using the BB CLI:
 
 ```sh
-bb plugin install https://github.com/Sargares22/bb-plugin-notify-feed
+bb plugin install git:https://github.com/Sargares22/bb-plugin-notify-feed.git@^0.3.0
 ```
 
-Requires BB 0.45 or later. Checked with BB 0.45 and 0.46. No account and no external service: the plugin reads threads through BB's own API and nothing leaves your machine.
+Requires BB 0.45 or later. The plugin runs entirely on the local machine and makes no external network requests.
 
 ## Settings
 
-Settings → Plugins → Notify Feed, or `bb plugin config notify-feed set <key> <value>`.
+Configure the plugin in Settings -> Plugins -> Notify Feed, or with `bb plugin config notify-feed set <key> <value>`.
 
-| Key | Default | Meaning |
+| Key | Default | Description |
 | --- | --- | --- |
-| `language` | `en` | Interface language: `en` or `ru`. With `ru` BB's system notices are shown in Russian as well; with `en` BB's text is left untouched. |
-| `marker` | empty | Reply marker, for example `[bg]`. Empty: agent replies are never hidden and no instruction is added to your agents. Set: agents in scope are asked to start short housekeeping replies with the marker, and finished replies that start with it move to the tab. |
-| `hide` | `true` | Hide rows in the main feed. Turn it off to get the stock feed back while the button and the tab keep working. No window reload is needed. |
-| `threads` | `[]` | JSON array of thread ids the plugin works in. Empty means every thread. |
+| `language` | `en` | Interface language: `en` or `ru`. In Russian, system notices in the tab are translated. |
+| `marker` | `""` | Reply prefix, such as `[bg]`. When set, agents receive an instruction to prefix short background replies with this marker, moving them to the tab. When empty, no instruction is added. |
+| `hide` | `true` | Hides notification rows in the main feed. When set to `false`, the main feed returns to default while the tab remains active. |
+| `threads` | `[]` | JSON array of thread IDs where the plugin runs. An empty array enables the plugin across all threads. |
 
-A changed setting takes effect at the next poll, within 10 seconds.
+Settings changes apply on the next poll cycle, within 8 seconds.
 
-## Turning it off
+## Messages from outside tools
 
-- Keep the tab, restore the feed: `bb plugin config notify-feed set hide false`.
-- Switch the plugin off: `bb plugin disable notify-feed`. Rows and the header return at once, without a window reload. The plugin writes to a thread only when you press Send in the tab.
+External scripts and services that post to a thread appear as standard user messages. To move an external message into the Notifications tab, format its first line as `[notify:Name]`, followed by the message body on subsequent lines.
 
-## Limits
+The name must contain 1 to 32 characters (letters, numbers, spaces, hyphens, or dots) and start with a letter or number. The card displays this name as a badge and hides the header line. Any formatting deviation leaves the message in the main feed.
 
-- Two of the three parts rest on things BB does not promise to keep. Hiding rows uses the experimental slot `experimental_appOverlay` and the feed's internal markup (`data-timeline-row-id` and the virtual list); the header button uses the experimental slot `experimental_threadHeaderAction`. A BB update can change or remove any of them: rows then stay visible, or the button disappears. The tab uses the public `threadPanelAction` slot and the public threads API; if an experimental slot is missing, the plugin skips it and the tab is still registered and opens from the right panel's "+" menu. This was checked with BB 0.45 and 0.46 and with a substituted API that lacks the experimental slots, not with later BB versions. Set `hide` to `false` if the feed misbehaves after an update.
-- If two feed polls in a row fail, hiding is lifted until the next successful poll, so rows are never kept hidden on outdated data; the cards in the tab stay as they were.
-- In a long (virtual) feed each hidden row leaves a gap of about 9 px: that is the spacing between rows, which a plugin cannot remove.
-- The feed is polled every 8 seconds, so a new row is hidden with a delay of up to that interval.
-- At most 20 pages of thread history are read.
-- The marker is placed by the model on instruction. A reply where the model forgot it stays visible.
-- The collapsed text is read from a hidden Markdown render of cards near the visible area; on a fast scroll a card may show its source text for a moment.
-- In rare kinds of code (tab-indented, inside quotes, nested backticks) a thread id may turn into a link.
-- View marks of deleted threads are not cleaned up (one number per thread).
-- The entry count in a thread's row comes from the open thread's feed; the agent's own messages to that thread are added when you open the conversation. Messages you wrote to that thread outside the tab are not shown in the conversation.
-- The plugin keeps the last 300 messages you sent from the tab, per thread. Whether a thread is archived is refreshed every 10 minutes.
-- Enter sends on a phone as well, so a line break cannot be typed there.
-- In a narrow panel a card's head wraps on its own: first "More" and the reply tag move to a second row, then the thread name.
+## How to turn off
+
+- Restore feed rows while keeping the tab: `bb plugin config notify-feed set hide false`
+- Disable the plugin completely: `bb plugin disable notify-feed`
+
+Disabling the plugin restores feed rows immediately without requiring a window reload.
+
+## Limitations
+
+- Hiding timeline rows and rendering the header button depend on BB experimental slots (`experimental_appOverlay` and `experimental_threadHeaderAction`), as well as internal timeline DOM attributes (`data-timeline-row-id`). Future BB updates may alter these interfaces. If experimental slots are unavailable, the plugin falls back to registering the tab in the right panel menu.
+- The timeline is polled every 8 seconds. New rows are hidden after a delay of up to 8 seconds.
+- If two consecutive polls fail, hiding is disabled until the next successful poll to avoid hiding content based on stale data.
+- In virtualized feeds, hidden rows leave a 1px element in the DOM.
+- The reply field in the tab enforces a limit of 20,000 characters.
+- Notes sent to the host agent trigger a new turn for that agent, as BB requires a turn to deliver messages.
+- At most 20 pages of timeline history are read per thread.
+- Thread archive status is cached and refreshed every 10 minutes.
+- The plugin stores up to 300 sent messages per thread in local KV storage.
 
 ## Development
 
@@ -94,7 +85,7 @@ bb plugin build
 bb plugin install .
 ```
 
-All interface strings live in `i18n.ts`, one entry per language.
+All UI strings are defined in `i18n.ts`.
 
 ## License
 
