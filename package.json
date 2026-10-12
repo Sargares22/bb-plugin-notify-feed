@@ -1,0 +1,29 @@
+{
+  "name": "bb-plugin-notify-feed",
+  "version": "0.3.0",
+  "description": "BB plugin: moves messages from other threads and child-thread notices out of a thread's feed into a Notifications tab.",
+  "license": "MIT",
+  "author": "Sargares22 (https://github.com/Sargares22)",
+  "repository": { "type": "git", "url": "https://github.com/Sargares22/bb-plugin-notify-feed" },
+  "homepage": "https://github.com/Sargares22/bb-plugin-notify-feed#readme",
+  "bugs": { "url": "https://github.com/Sargares22/bb-plugin-notify-feed/issues" },
+  "keywords": ["bb", "bb-plugin", "agents", "child-threads", "notifications", "timeline"],
+  "type": "module",
+  "engines": { "bb": ">=0.45", "bbPluginSdk": ">=0.6.15" },
+  "scripts": { "build": "bb plugin build", "typecheck": "tsc --noEmit" },
+  "bb": {
+    "name": "Notify Feed",
+    "description": "Moves messages from other threads and child-thread notices out of a thread's feed into a Notifications tab.",
+    "branding": { "icon": "./assets/icon.svg" },
+    "server": "./server.ts",
+    "app": "./app.tsx",
+    "skills": []
+  },
+  "dependencies": { "zod": "^4.6.5" },
+  "devDependencies": {
+    "@get-bb/plugin-sdk": "0.6.15",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "typescript": "^5.7.0"
+  }
+}

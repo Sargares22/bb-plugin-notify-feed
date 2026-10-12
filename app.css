@@ -1,0 +1,113 @@
+/* No rule here depends on a particular width: rows wrap and share space on their own, in a wide panel and on a phone alike. */
+.nf-trigger{box-sizing:border-box;block-size:28px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--foreground);padding:0 8px;font:inherit;font-size:12px;white-space:nowrap;cursor:pointer}
+/* The panel is a size container only for BB's own Markdown tables, which size themselves in container units; no rule here queries it. */
+.nf-panel{container-type:inline-size;min-inline-size:0;color:var(--foreground);font-size:13px;overflow-wrap:break-word}
+.nf-panel :is(button,[role="button"],textarea,input):focus-visible,.nf-trigger:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+.nf-top{display:flex;flex-wrap:wrap;align-items:start;gap:8px 12px;padding-block-end:14px;border-block-end:1px solid var(--border-seam)}
+.nf-top nav b,.nf-day small,.nf-reply-tag,.nf-expand,.nf-count{color:var(--subtle-foreground);font-weight:400;font-variant-numeric:tabular-nums}
+.nf-top nav{display:flex;flex-wrap:wrap;gap:6px;min-inline-size:0}
+.nf-top button{border:1px solid var(--border);background:var(--surface-raised);color:var(--foreground);padding:3px 10px;font:inherit;font-size:12px;line-height:18px;white-space:nowrap;cursor:pointer}
+.nf-top nav button{border-radius:999px}
+.nf-top button[aria-pressed="true"]{border-color:var(--surface-selected-border);background:var(--surface-selected);font-weight:500}
+/* The view switch keeps to the far end of the filter row and drops to a row of its own when the filters need the room. */
+.nf-views{display:flex;margin-inline-start:auto}
+.nf-views button:first-child{border-start-start-radius:6px;border-end-start-radius:6px}
+.nf-views button:last-child{margin-inline-start:-1px;border-start-end-radius:6px;border-end-end-radius:6px}
+.nf-views button[aria-pressed="true"]{position:relative}
+.nf-day{margin-block-start:18px}
+.nf-day h2{position:relative;display:flex;align-items:center;gap:8px;margin:0;margin-block-end:10px;padding-inline-start:30px;color:var(--muted-foreground);font-size:12px;font-weight:600}
+.nf-day h2::before{position:absolute;inset-inline-start:6px;inline-size:9px;block-size:9px;border-radius:50%;background:var(--border);content:""}
+.nf-day h2::after{block-size:1px;flex:1;background:var(--border-seam);content:""}
+.nf-day small{font-size:11px}
+.nf-stream{position:relative;display:flex;flex-direction:column;gap:10px;padding-inline-start:30px}
+.nf-stream::before{position:absolute;inset-block:0;inset-inline-start:10px;inline-size:1px;background:var(--border-seam);content:""}
+.nf-card{position:relative;min-inline-size:0;border:1px solid var(--border-seam);border-radius:8px;background:var(--surface-raised)}
+.nf-card,.nf-trow,.nf-msg{--nf-tone:var(--muted-foreground)}
+.nf-card[data-open]{border-color:var(--surface-selected-border);background:var(--surface-recessed)}
+.nf-ok{--nf-tone:var(--success)}
+.nf-warn{--nf-tone:var(--warning)}
+.nf-bad{--nf-tone:var(--destructive-text)}
+.nf-marker{position:absolute;inset-block-start:9px;inset-inline-start:-31px;display:grid;inline-size:21px;block-size:21px;place-items:center;border:1.5px solid var(--nf-tone);border-radius:50%;background:var(--sidebar);color:var(--nf-tone)}
+.nf-marker svg{inline-size:12px;block-size:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.nf-sum{padding:9px 12px;border-radius:7px;cursor:pointer}
+/* The head is one row while everything fits. The thread name gives up room first; when it would get less than its basis,
+   the row wraps: first "More" and the reply tag go to a second row, then the name does. */
+.nf-head{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;min-inline-size:0;line-height:20px}
+.nf-head time,.nf-kind,.nf-reply-tag,.nf-expand{flex:none;white-space:nowrap}
+.nf-new{flex:none;inline-size:6px;block-size:6px;margin-inline-end:-2px;border-radius:50%;background:var(--foreground)}
+.nf-head time{font-size:12px;font-weight:500;font-variant-numeric:tabular-nums}
+.nf-kind{padding:0 5px;border-radius:3px;background:color-mix(in oklch,var(--nf-tone) 12%,transparent);color:var(--nf-tone);font-size:11px;font-weight:600;line-height:16px}
+.nf-source{display:block;box-sizing:border-box;flex:1 1 14ch;min-inline-size:0;max-inline-size:max-content;overflow:hidden;padding:1px 7px;border:1px solid var(--border);border-radius:12px;background:var(--background);color:var(--muted-foreground);font:inherit;font-size:12px;line-height:18px;text-align:start;text-overflow:ellipsis;white-space:nowrap}
+.nf-source *{display:inline;white-space:nowrap}
+.nf-source:empty::before{content:attr(title)}
+button.nf-source{cursor:pointer}
+.nf-tail{display:flex;flex:none;align-items:center;gap:8px;margin-inline-start:auto}
+.nf-reply-tag{padding:1px 5px;border-radius:3px;background:var(--surface-recessed);font-size:11px}
+.nf-expand{font-size:11px}
+.nf-expand::after{display:inline-block;margin-inline-start:3px;content:"›"}
+.nf-card[data-open] .nf-expand::after{transform:rotate(90deg)}
+.nf-snippet{display:-webkit-box;max-block-size:54px;margin-block-start:5px;overflow:hidden;color:var(--muted-foreground);font-size:12px;line-height:18px;-webkit-box-orient:vertical;-webkit-line-clamp:3}
+.nf-probe{position:absolute;inset-inline:0;block-size:1px;overflow:clip;opacity:0;pointer-events:none}
+.nf-body{min-inline-size:0;padding:8px 14px 14px;border-block-start:1px solid var(--border-seam)}
+.nf-body pre,.nf-msg pre{max-inline-size:100%;white-space:pre-wrap}
+.nf-body table,.nf-body :has(>table),.nf-msg table,.nf-msg :has(>table){inline-size:100%;table-layout:fixed}
+.nf-reply{margin-block-start:12px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--background)}
+.nf-reply>b{display:block;margin-block-end:5px;color:var(--muted-foreground);font-size:11px;font-weight:600}
+.nf-empty{margin-block-start:14px;color:var(--muted-foreground);font-size:13px}
+/* By thread: one row per sender. The name may take two lines; the latest entry is one line and moves under its time and kind when squeezed. */
+.nf-threads{display:flex;flex-direction:column;gap:8px;margin-block-start:14px}
+.nf-trow{position:relative;display:flex;align-items:center;gap:10px;min-inline-size:0;padding:10px 12px;border:1px solid var(--border-seam);border-radius:8px;background:var(--surface-raised);cursor:pointer}
+.nf-dot{flex:none;inline-size:9px;block-size:9px;border-radius:50%;background:var(--nf-tone)}
+.nf-trow-main{flex:1 1 0;min-inline-size:0}
+.nf-trow-main>b{display:-webkit-box;overflow:hidden;font-weight:600;line-height:20px;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.nf-trow-last{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 6px;min-inline-size:0;color:var(--subtle-foreground);font-size:12px;line-height:18px}
+.nf-trow-last>time,.nf-trow-last>span{flex:none;white-space:nowrap;font-variant-numeric:tabular-nums}
+.nf-trow-last>span{color:var(--nf-tone)}
+.nf-trow-last .nf-snippet{display:block;flex:1 1 16ch;min-inline-size:0;max-block-size:none;margin:0;text-overflow:ellipsis;white-space:nowrap}
+.nf-count{flex:none;font-size:12px}
+/* One thread's conversation: the thread on the start side, the agent and the user on the end side, turn endings across the full row. */
+.nf-chat{display:flex;flex-direction:column;block-size:100%}
+.nf-bar{display:flex;flex:none;align-items:center;gap:10px;padding-block-end:10px;border-block-end:1px solid var(--border-seam)}
+.nf-bar button{position:relative;flex:none;padding:3px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface-raised);color:var(--foreground);font:inherit;font-size:12px;line-height:18px;white-space:nowrap;cursor:pointer}
+.nf-bar button::after{position:absolute;inset:min(0px,(100% - 44px)/2);content:""}
+.nf-bar b{flex:1 1 0;min-inline-size:0;font-weight:600}
+.nf-scroll{display:flex;flex:1 1 auto;flex-direction:column-reverse;min-block-size:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+.nf-talk{display:flex;flex-direction:column;gap:9px;margin-block-end:auto;padding-block:12px}
+.nf-msg{box-sizing:border-box;align-self:flex-start;min-inline-size:0;max-inline-size:88%;padding:8px 11px;border:1px solid var(--border-seam);border-radius:10px;background:var(--surface-raised)}
+.nf-msg[data-who="agent"],.nf-msg[data-who="you"]{align-self:flex-end;border-color:var(--border);background:var(--background)}
+.nf-msg[data-who="you"]{border-color:color-mix(in oklch,var(--success) 40%,var(--border));background:color-mix(in oklch,var(--success) 12%,var(--background))}
+.nf-msg[data-who="you"] p{white-space:pre-line}
+.nf-msg[data-who="state"]{align-self:stretch;max-inline-size:100%;border-color:color-mix(in oklch,var(--nf-tone) 45%,transparent)}
+.nf-msg-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:0 10px;margin-block-end:3px;font-size:11px;line-height:16px}
+.nf-msg-head b{color:var(--muted-foreground);font-weight:600}
+.nf-msg[data-who="state"] .nf-msg-head b{color:var(--nf-tone)}
+.nf-msg-head time{color:var(--subtle-foreground);font-variant-numeric:tabular-nums;white-space:nowrap}
+/* The field stays under the list. The button sits beside the field and moves under it when there is no room for both. */
+.nf-foot{flex:none;padding-block-start:10px;border-block-start:1px solid var(--border-seam)}
+.nf-send{display:flex;flex-wrap:wrap;align-items:end;gap:8px}
+.nf-send textarea{box-sizing:border-box;flex:999 1 0;min-inline-size:50%;min-block-size:max(40px,2lh);max-block-size:12lh;padding:9px 11px;border:1px solid var(--border);border-radius:8px;background:var(--background);color:var(--foreground);font:inherit;line-height:20px;resize:none;field-sizing:content}
+.nf-send textarea[aria-invalid]{border-color:var(--destructive-text)}
+.nf-send button{flex:1 0 auto;min-block-size:40px;padding-inline:14px;border:0;border-radius:8px;background:var(--foreground);color:var(--background);font:inherit;font-weight:600;white-space:nowrap;cursor:pointer}
+.nf-send button:focus-visible{outline-color:var(--foreground)}
+.nf-send button:disabled{opacity:.5;cursor:default}
+.nf-error{margin:0;margin-block-start:6px;color:var(--destructive-text);font-size:12px;line-height:18px}
+.nf-note{display:flex;align-items:center;gap:8px;inline-size:fit-content;max-inline-size:100%;min-block-size:40px;font-size:12px;cursor:pointer}
+.nf-note input{flex:none;inline-size:1.25em;block-size:1.25em;margin:0;accent-color:var(--foreground)}
+.nf-hint{margin:0;color:var(--subtle-foreground);font-size:12px;line-height:18px}
+.nf-scroll+.nf-hint{flex:none;padding-block:8px}
+.nf-top button:active,.nf-bar button:active,.nf-send button:enabled:active,.nf-trigger:active{transform:scale(.97)}
+.nf-sum:active,.nf-trow:active{background:var(--state-hover)}
+button.nf-source:active{color:var(--foreground)}
+@media (hover:hover) and (pointer:fine){
+  .nf-trigger:hover,.nf-top button:not([aria-pressed="true"]):hover,.nf-bar button:hover,.nf-sum:hover,.nf-trow:hover{background:var(--state-hover)}
+  .nf-trow:hover{border-color:var(--surface-selected-border)}
+  button.nf-source:hover{color:var(--foreground)}
+}
+/* Under a finger every control is at least 40px tall, and the field's text is large enough for iOS not to zoom the page on focus. */
+@media (pointer:coarse){
+  .nf-top button,.nf-bar button{min-block-size:40px}
+  .nf-send textarea{font-size:16px}
+}
+@media (prefers-reduced-motion:no-preference){
+  .nf-trigger,.nf-top button,.nf-bar button,.nf-send button{transition:transform 160ms ease-out}
+}
