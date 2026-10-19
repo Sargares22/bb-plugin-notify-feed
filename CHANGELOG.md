@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.3 - 2026-10-19
+
+- The tab sees a thread's whole history again. BB 0.46 stopped saying whether older rows exist, so only the newest page was read: a long thread showed a handful of its notifications, and a conversation could miss the agent's own messages.
+- The history is read once and kept in memory; each poll reads only the newest rows. Every 10 minutes it is read whole again.
+- A digest of several child threads is no longer filed under the first thread it mentions, and replying to it no longer goes to that thread.
+
 ## 0.3.2 - 2026-10-19
 
 - Long threads no longer show empty gaps where hidden rows were. BB 0.46 dropped the row attribute the plugin relied on, so in a feed of 20+ rows hidden rows got `display:none` and kept their old height. They now shrink to 1px there.

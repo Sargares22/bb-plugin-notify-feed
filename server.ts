@@ -45,7 +45,18 @@ const scopeOf = (value: string): string[] | null => {
   try { return threadsSchema.parse(JSON.parse(value)); } catch { return null; }
 };
 
+// A safeguard against an endless walk back through the feed: pages read at most per thread in one go.
 const MAX_PAGES = 20;
+// How many threads (and thread pairs for talk) the read feeds and short-lived results are kept for in memory.
+const MAX_CACHED = 50;
+// How often a kept feed is read whole again.
+const FULL_MS = 10 * 60_000;
+// Stores a value as the most recent one and drops the least recently stored ones beyond MAX_CACHED.
+const keep = <K, V>(map: Map<K, V>, key: K, value: V) => {
+  map.delete(key);
+  map.set(key, value);
+  while (map.size > MAX_CACHED) map.delete(map.keys().next().value!);
+};
 const MEMO_MS = 5000;
 // A peer's feed is read only while its conversation is open, and at most once per TALK_MEMO_MS.
 const TALK_MEMO_MS = 20_000;
@@ -64,6 +75,24 @@ type Row = {
 const flatten = (rows: Row[], into: Row[] = []): Row[] => {
   for (const row of rows) { into.push(row); if (row.children) flatten(row.children, into); }
   return into;
+};
+// BB splits a long turn between pages: each page carries the same row with part of its children.
+// The parts are joined: children only the older part has go first, a child both have is taken from the newer part.
+const joinRow = (older: Row, newer: Row): Row => {
+  if (!older.children || !newer.children) return { ...older, ...newer, children: newer.children ?? older.children };
+  const before = new Map(older.children.map(c => [c.id, c]));
+  const fresh = new Set(newer.children.map(c => c.id));
+  const children = [...older.children.filter(c => !fresh.has(c.id)), ...newer.children.map(c => before.has(c.id) ? joinRow(before.get(c.id)!, c) : c)];
+  return { ...older, ...newer, children };
+};
+// Rows read from the newer side replace the older ones from the first row both have on. Only that row can be a part
+// of a split turn (a page is cut at its oldest row), so only it is joined; the rest are taken as read.
+const joinRows = (older: Row[], newer: Row[]): Row[] => {
+  const fresh = new Set(newer.map(r => r.id));
+  const cut = older.findIndex(r => fresh.has(r.id));
+  if (cut < 0) return [...older, ...newer];
+  const first = older.find(r => r.id === newer[0].id);
+  return [...older.slice(0, cut), ...(first ? [joinRow(first, newer[0])] : [newer[0]]), ...newer.slice(1)];
 };
 // An empty marker matches nothing: agent replies are then never hidden.
 const isBgWith = (marker: string) => (r: Row) => !!marker && r.kind === "conversation" && r.role === "assistant" && !!r.text?.trimStart().startsWith(marker);
@@ -140,18 +169,47 @@ export default async function plugin(bb: BbPluginApi) {
   let marker = first.marker.trim();
   const inScope = (threadId: string) => scope !== null && (scope.length === 0 || scope.includes(threadId));
 
-  // BB returns the feed in pages; walk back by cursor while older rows exist.
-  const allRows = async (threadId: string) => {
+  // BB returns the feed in pages, newest first; an older page exists while olderCursor is set (BB 0.46 sends no hasOlderRows).
+  // The whole history is read once per thread and kept in feedCache. After that only the newest pages are read, back to
+  // the first page that holds an already known row: the newest page is always read again, its rows still change.
+  // Everything older is taken from the cache. Once per FULL_MS the history is read whole again, in case older rows changed.
+  const feedCache = new Map<string, { rows: Row[]; at: number; reading?: Promise<Row[]> }>();
+  const readRows = async (threadId: string, known: Row[] | null): Promise<Row[]> => {
+    const ids = new Set(known?.map(r => r.id));
     let rows: Row[] = [];
+    let updates: Row[] = [];
+    let whole = false;
     let query: { threadId: string; includeNestedRows: "true"; beforeAnchorId?: string; beforeAnchorSeq?: string } = { threadId, includeNestedRows: "true" };
     for (let page = 0; page < MAX_PAGES; page++) {
       const timeline = await bb.sdk.threads.timeline(query);
-      rows = [...(timeline.rows as Row[]), ...rows];
+      const pageRows = timeline.rows as Row[];
+      rows = joinRows(pageRows, rows);
+      if (page === 0) updates = (timeline.timelinePage.olderRowUpdates ?? []) as Row[];
       const cursor = timeline.timelinePage.olderCursor;
-      if (!timeline.timelinePage.hasOlderRows || !cursor) break;
+      whole = !cursor;
+      if (!cursor || pageRows.some(r => ids.has(r.id))) break;
       query = { threadId, includeNestedRows: "true", beforeAnchorId: cursor.anchorId, beforeAnchorSeq: String(cursor.anchorSeq) };
     }
-    return flatten(rows);
+    if (!known || whole) return rows;
+    // A row of an older page that is still changing comes as an update: its children are only those changed.
+    const changed = new Map(updates.map(r => [r.id, r]));
+    return joinRows(known.map(r => changed.has(r.id) ? joinRow(r, changed.get(r.id)!) : r), rows);
+  };
+  const allRows = async (threadId: string) => {
+    const hit = feedCache.get(threadId);
+    if (hit?.reading) return flatten(await hit.reading);
+    const started = Date.now();
+    const full = !hit || started - hit.at >= FULL_MS;
+    const reading = readRows(threadId, full ? null : hit.rows);
+    const entry: { rows: Row[]; at: number; reading?: Promise<Row[]> } = { rows: hit?.rows ?? [], at: hit?.at ?? 0, reading };
+    // The least recently read threads are dropped first.
+    keep(feedCache, threadId, entry);
+    try {
+      entry.rows = await reading;
+      if (full) entry.at = started;
+    } catch (error) { if (!hit) feedCache.delete(threadId); throw error; }
+    finally { delete entry.reading; }
+    return flatten(entry.rows);
   };
 
   // Thread ids in the texts become links with the thread's title. Titles are read once per thread and kept in threadCache.
@@ -215,7 +273,9 @@ export default async function plugin(bb: BbPluginApi) {
         replyAt: replyAt.get(r.id) ?? r.createdAt ?? r.startedAt ?? 0,
         parts: [] as Part[],
       };
-      const senderThreadId = r.senderThreadId ?? r.systemMessageSubject?.threadId ?? r.text?.match(/@thread:(thr_[\w-]+)/)?.[1] ?? null;
+      // A digest of several child threads has no single sender: it is not filed under the first thread it names.
+      const senderThreadId = r.systemMessageSubject?.kind === "thread-batch" ? null
+        : r.senderThreadId ?? r.systemMessageSubject?.threadId ?? r.text?.match(/@thread:(thr_[\w-]+)/)?.[1] ?? null;
       const rawKind = r.systemMessageKind && r.systemMessageKind !== "unlabeled" ? r.systemMessageKind : r.kind === "system" ? (r.title ?? "system") : "message";
       const rawText = r.text ?? [r.title, r.detail].filter(Boolean).join("\n");
       return {
@@ -272,7 +332,7 @@ export default async function plugin(bb: BbPluginApi) {
         return { ok: true, out: rows.map((r, index) => ({ id: r.id, time: r.createdAt ?? r.startedAt ?? 0, text: sub(texts[index]) })) };
       } catch { return { ok: false, out: [] }; }
     })();
-    talkMemo.set(key, { at: Date.now(), value });
+    keep(talkMemo, key, { at: Date.now(), value });
     return value;
   };
 
@@ -282,7 +342,7 @@ export default async function plugin(bb: BbPluginApi) {
     const hit = memo.get(threadId);
     if (hit && Date.now() - hit.at < MEMO_MS) return hit.value;
     const value = compute(threadId);
-    memo.set(threadId, { at: Date.now(), value });
+    keep(memo, threadId, { at: Date.now(), value });
     return value;
   };
   settings.onChange(next => { scope = scopeOf(next.threads); hide = next.hide; lang = langOf(next.language); marker = next.marker.trim(); memo.clear(); });
