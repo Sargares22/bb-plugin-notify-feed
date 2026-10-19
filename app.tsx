@@ -25,19 +25,24 @@ const EMPTY: Data = { hideIds: [], items: [] };
 type Call = ReturnType<typeof useRpc<typeof rpcContract>>["call"];
 type Store = { data: Data; listeners: Set<() => void>; timer: number; fails: number };
 const stores = new Map<string, Store>();
+// The hidden rows of the last good answer outlive the store: on a return to the thread they are hidden from the first render,
+// so the feed is not drawn in full and then collapsed. Only ids are kept; a stale poll drops them.
+const lastHidden = new Map<string, Pick<Data, "hideIds" | "hide">>();
 
 function subscribeFeed(threadId: string, call: Call, listener: () => void) {
   let store = stores.get(threadId);
   if (!store) {
-    const created: Store = { data: EMPTY, listeners: new Set(), timer: 0, fails: 0 };
+    const created: Store = { data: { ...EMPTY, ...lastHidden.get(threadId) }, listeners: new Set(), timer: 0, fails: 0 };
     const refresh = () => void call("feed", { threadId }).then(value => {
       if (stores.get(threadId) !== created) return;
       lastLang = value.lang;
       created.fails = 0;
       created.data = value;
+      lastHidden.set(threadId, { hideIds: value.hideIds, hide: value.hide });
       created.listeners.forEach(notify => notify());
     }).catch(() => {
       if (stores.get(threadId) !== created || ++created.fails !== FAILS_TO_UNHIDE) return;
+      lastHidden.delete(threadId);
       created.data = { ...created.data, stale: true };
       created.listeners.forEach(notify => notify());
     });
@@ -63,13 +68,14 @@ function useFeed(threadId: string | null) {
 }
 
 // A BB feed row is a wrapper with data-timeline-row-id. In the plain feed the row leaves the flow.
-// In the virtual feed (20+ rows) the virtualizer takes the row height from a measurement: display:none there
-// keeps the old height and leaves a gap, so the row shrinks to 1px and its content is hidden.
+// In the virtual feed (20+ rows) the rows sit in [data-timeline-virtual-spacer] and the virtualizer measures each one:
+// it drops a zero height and keeps the old one, so display:none there leaves a gap. The row shrinks to 1px instead.
 function hideCss(ids: string[]) {
   const row = (id: string) => `[data-timeline-row-id=${JSON.stringify(id)}]`;
-  const flow = ids.map(id => `${row(id)}:not([data-timeline-windowed-realized])`).join(",\n");
-  const box = ids.map(id => `${row(id)}[data-timeline-windowed-realized]`).join(",\n");
-  const inner = ids.map(id => `${row(id)}[data-timeline-windowed-realized]>*`).join(",\n");
+  const virtual = (id: string) => `[data-timeline-virtual-spacer]>${row(id)}`;
+  const flow = ids.map(id => `:not([data-timeline-virtual-spacer])>${row(id)}`).join(",\n");
+  const box = ids.map(virtual).join(",\n");
+  const inner = ids.map(id => `${virtual(id)}>*`).join(",\n");
   return `${flow}{display:none!important}\n${box}{height:1px!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important}\n${inner}{display:none!important}`;
 }
 

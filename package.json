@@ -1,6 +1,6 @@
 {
   "name": "bb-plugin-notify-feed",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Keep your conversation from drowning in child-thread reports when a thread delegates work. Background messages and completion notices move to a Notifications tab beside the feed.",
   "license": "MIT",
   "author": "Sargares22 (https://github.com/Sargares22)",
